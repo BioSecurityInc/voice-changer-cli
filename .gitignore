@@ -84,3 +84,7 @@ vcclient-dev/
 *.log
 .DS_Store
 stored_setting.json
+
+# Tooling and GitHub configs
+.github/
+.vscode/
