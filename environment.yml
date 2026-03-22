@@ -1,0 +1,42 @@
+name: hrvc_env
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip<24.1
+  - setuptools<70.0.0
+  - numpy=1.26.4
+  - scipy=1.10.1
+  - pip:
+      # PyTorch 2.0.x is required — do not upgrade
+      - torch==2.0.0
+      - torchaudio==2.0.1
+      - torchvision==0.15.1
+      - librosa==0.11.0
+      - sounddevice==0.5.5
+      - soundfile==0.13.1
+      - numba==0.60.0
+      - resampy==0.4.3
+      - soxr==1.0.0
+      - fairseq>=0.12.2
+      - speechbrain
+      - torchcrepe
+      - einops
+      - local-attention
+      - transformers
+      - huggingface_hub
+      - faiss-cpu==1.7.3
+      - onnxruntime==1.23.2
+      - onnx==1.13.1
+      - rich
+      - tqdm
+      - requests
+      - psutil
+      - coloredlogs
+      - dataclasses-json
+      - fastapi
+      - uvicorn
+      - python-socketio
+      - websockets

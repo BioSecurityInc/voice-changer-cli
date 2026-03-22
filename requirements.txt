@@ -1,0 +1,55 @@
+# ============================================================
+# hRVC Universal Voice Changer CLI — Dependency Manifest
+# Python 3.10 | Tested on macOS 14+ (Apple Silicon / x86_64)
+# ============================================================
+
+# --- Core PyTorch Stack ---
+# NOTE: torch 2.0.x is required. Newer versions break transformers compatibility.
+torch==2.0.0
+torchaudio==2.0.1
+torchvision==0.15.1
+
+# --- Audio I/O & Processing ---
+librosa==0.11.0
+sounddevice==0.5.5
+soundfile==0.13.1
+scipy==1.10.1
+numpy==1.26.4
+numba==0.60.0
+llvmlite==0.43.0
+resampy==0.4.3
+soxr==1.0.0
+audioread==3.1.0
+
+# --- Neural Engine Core ---
+fairseq>=0.12.2
+speechbrain
+torchcrepe
+einops
+local-attention
+transformers==4.36.0
+huggingface_hub
+faiss-cpu==1.7.3
+
+# --- ONNX Runtime ---
+onnxruntime==1.23.2
+onnx==1.13.1
+onnxsim
+
+# --- Utilities ---
+PyYAML==6.0
+tqdm==4.65.0
+requests==2.32.5
+psutil==5.9.4
+rich
+coloredlogs==15.0.1
+filelock
+dataclasses-json
+packaging==23.0
+
+# --- Server Components ---
+fastapi
+uvicorn
+python-socketio
+python-multipart
+websockets

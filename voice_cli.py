@@ -15,6 +15,7 @@ import torch
 import numpy as np
 import sounddevice as sd
 import librosa
+import json
 import traceback
 import threading
 from typing import Optional, Type
@@ -87,13 +88,23 @@ class UI:
         finally: termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
     @staticmethod
-    def select_item(prompt, items):
+    def select_item(prompt, items, default_id=None):
         print(Theme.header(prompt))
         for i, (idx, name) in enumerate(items):
-            print(f"  {Theme.GREEN}[{i}]{Theme.RESET}  {name}  {Theme.DIM}(ID: {idx}){Theme.RESET}")
+            is_def = f" {Theme.YELLOW}{Theme.BOLD}[DEFAULT]{Theme.RESET}" if idx == default_id else ""
+            print(f"  {Theme.GREEN}[{i}]{Theme.RESET}  {name}  {Theme.DIM}(ID: {idx}){Theme.RESET}{is_def}")
+        
+        prompt_text = f"\n{Theme.BOLD}Choice index"
+        if default_id is not None:
+            prompt_text += f" {Theme.DIM}(Enter for default){Theme.RESET}"
+        prompt_text += f":{Theme.RESET} "
+        
         while True:
             try:
-                choice = int(input(f"\n{Theme.BOLD}Choice index:{Theme.RESET} "))
+                raw = input(prompt_text).strip()
+                if raw == "" and default_id is not None:
+                    return default_id
+                choice = int(raw)
                 if 0 <= choice < len(items): return items[choice][0]
             except (ValueError, KeyboardInterrupt): pass
             print(Theme.error("Invalid input. Try again."))
@@ -144,13 +155,20 @@ class AdapterManager:
         from adapters.base_adapter import BaseVoiceAdapter
         file_path = None
         
-        if os.path.exists(adapt_input) and adapt_input.endswith(".py"):
-            file_path = os.path.abspath(adapt_input)
-        else:
-            file_path = os.path.join(os.path.dirname(__file__), "adapters", f"{adapt_input}_adapter.py")
+        # Ensure .py extension
+        name = adapt_input if adapt_input.endswith(".py") else f"{adapt_input}.py"
         
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Adapter not found: {file_path}")
+        # 1. Search in current path
+        if os.path.exists(name):
+            file_path = os.path.abspath(name)
+        # 2. Search in adapters/ folder
+        else:
+            candidate = os.path.join(os.path.dirname(__file__), "adapters", name)
+            if os.path.exists(candidate):
+                file_path = candidate
+        
+        if not file_path:
+            raise FileNotFoundError(f"Adapter not found: {name} (tried current dir and adapters/ folder)")
 
         spec = importlib.util.spec_from_file_location("adapter_mod", file_path)
         module = importlib.util.module_from_spec(spec)
@@ -172,14 +190,41 @@ class VoiceChangerApp:
         self.args = args
         self.audio = AudioHandler()
         self.adapter = None
+        self.config_path = os.path.join(os.path.dirname(__file__), "last_devices.json")
+
+    def load_last_devices(self):
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, "r") as f:
+                    return json.load(f)
+            except: pass
+        return {}
+
+    def save_devices(self, input_id, output_id):
+        with open(self.config_path, "w") as f:
+            json.dump({"input_id": input_id, "output_id": output_id}, f)
 
     def setup(self):
         UI.banner()
         
-        # 1. Device Selection
+        # 1. Device Selection (with persistence)
+        last = self.load_last_devices()
         inputs, outputs = self.audio.list_devices()
-        self.input_id = self.args.input_device if self.args.input_device is not None else UI.select_item("Select Input Source", inputs)
-        self.output_id = self.args.output_device if self.args.output_device is not None else UI.select_item("Select Output Target", outputs)
+        
+        # Determine Input
+        if self.args.input_device is not None:
+            self.input_id = self.args.input_device
+        else:
+            self.input_id = UI.select_item("Select Input Source", inputs, default_id=last.get("input_id"))
+
+        # Determine Output
+        if self.args.output_device is not None:
+            self.output_id = self.args.output_device
+        else:
+            self.output_id = UI.select_item("Select Output Target", outputs, default_id=last.get("output_id"))
+
+        # Save for next time
+        self.save_devices(self.input_id, self.output_id)
 
         # 2. Engine Loading
         if not self.args.adapt or not self.args.model:
@@ -229,6 +274,7 @@ def build_parser():
     p.add_argument("-engine", help="Path to engine source")
     p.add_argument("--input_device", type=int)
     p.add_argument("--output_device", type=int)
+    p.add_argument("-s", "--select", action="store_true", help="Force device selection")
     p.add_argument("--pitch", type=int, default=0)
     p.add_argument("--index", type=float, default=0.7)
     p.add_argument("--protect", type=float, default=0.5)
