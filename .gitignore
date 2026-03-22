@@ -75,3 +75,16 @@ beatrice_internal_api.cp310-win_amd64.pyd
 108_average_110b_10.bin
 
 server/model_dir_static/Beatrice-JVS
+
+# Model weights and engine sources
+model_source/
+
+# Development environment and logs
+vcclient-dev/
+*.log
+.DS_Store
+stored_setting.json
+
+# Tooling and GitHub configs
+.github/
+.vscode/
