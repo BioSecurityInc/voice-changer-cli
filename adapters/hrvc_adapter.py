@@ -16,60 +16,9 @@ import sys
 import json
 import torch
 import numpy as np
-import librosa
 import traceback
+from scipy.signal import resample_poly
 from adapters.base_adapter import BaseVoiceAdapter
-
-# ── Pitch Estimation Engine ──────────────────────────────────────────────────
-class LibrosaF0Predictor:
-    """
-    High-performance fundamental frequency (F0) estimation.
-    Uses Probabilistic Yin (pYIN) algorithm for stable pitch tracking in speech.
-    """
-    def __init__(self, sample_rate=16000, hop_length=160):
-        self.sample_rate = sample_rate
-        self.hop_length = hop_length
-        self.f0_bin = 256
-        self.f0_mel_min = 1127.0 * np.log(1.0 + 50.0 / 700.0)
-        self.f0_mel_max = 1127.0 * np.log(1.0 + 1100.0 / 700.0)
-    
-    def compute_f0(self, wav, p_len=None):
-        """Calculates F0 trajectory for the input waveform."""
-        wav_f32 = np.asarray(wav, dtype=np.float32).flatten()
-        
-        # pYIN is robust to noise and background artifacts
-        f0, _, _ = librosa.pyin(
-            wav_f32, fmin=85.0, fmax=1100.0,
-            sr=self.sample_rate, frame_length=1024,
-            hop_length=self.hop_length, fill_na=0.0
-        )
-        
-        # Calculate RMS energy to apply a silence gate
-        rms = librosa.feature.rms(y=wav_f32, frame_length=1024, hop_length=self.hop_length)[0]
-        length = min(len(f0), len(rms))
-        f0, rms = f0[:length], rms[:length]
-        
-        # Threshold: any signal below -55dB is treated as silence (f0 = 0)
-        f0[rms < 10**(-55.0/20.0)] = 0.0 
-
-        # Apply median filtering to smooth out pitch transitions
-        from scipy.signal import medfilt
-        if np.count_nonzero(f0) > 3:
-            f0 = np.where(f0 > 0, medfilt(f0, kernel_size=7), 0.0)
-        
-        # Handle sequence padding for batch processing compatibility
-        if p_len:
-            f0 = np.pad(f0, (0, max(0, p_len - len(f0))))[:p_len]
-        return f0.astype(np.float32)
-
-    def coarse_f0(self, f0):
-        """Converts raw Hz frequencies into discretized Mel bins for the engine."""
-        f0 = np.where(np.isfinite(f0), f0, 0.0)
-        f0_mel = 1127.0 * np.log(1.0 + (f0 / 700.0))
-        pos = f0_mel > 0.0
-        if np.any(pos):
-            f0_mel[pos] = (f0_mel[pos] - self.f0_mel_min) * (self.f0_bin - 2) / (self.f0_mel_max - self.f0_mel_min) + 1.0
-        return np.clip(f0_mel, 1.0, self.f0_bin - 1).astype(np.float32)
 
 # ── hRVC Main Adapter ──────────────────────────────────────────────────────────
 class HRVCVoiceAdapter(BaseVoiceAdapter):
@@ -126,8 +75,7 @@ class HRVCVoiceAdapter(BaseVoiceAdapter):
 
         self.engine = TimbreInference(tgt_sr=48000, config=EngineConfig(self.device_obj))
         
-        # Assign pitch predictor
-        self.engine.model_rmvpe = LibrosaF0Predictor() 
+        # No manual Librosa override - let the engine use its native RMVPE Predictor
         
         # Execute consecutive loading pipeline
         try:
@@ -136,10 +84,16 @@ class HRVCVoiceAdapter(BaseVoiceAdapter):
             self._load_acoustic_model()
             self._load_faiss_index()
             
-            # Sync runtime settings
             self.engine.index_rate_fused = self.params.get("index", 0.7)
             self.engine.f0_up_key = self.params.get("pitch", 0.0)
             self.engine.protect = self.params.get("protect", 0.5)
+
+            # Resolve and Inject RMVPE weights manually to avoid FileNotFoundError
+            # when running from different directory contexts.
+            from HalimGSS.TimbreNode.Predictors.RMVPEF0Predictor import RMVPEF0Predictor
+            rmvpe_p = os.path.join(self.engine_path, "assets", "rmvpe", "rmvpe_big.pt")
+            if os.path.exists(rmvpe_p):
+                self.engine.model_rmvpe = RMVPEF0Predictor(model_path=rmvpe_p, device=self.device_obj)
             
         except Exception as e:
             traceback.print_exc()
@@ -236,9 +190,9 @@ class HRVCVoiceAdapter(BaseVoiceAdapter):
         if self.engine is None: 
             raise RuntimeError("Engine not ready. Call load() first.")
         
-        # Normalization and internal resampling
+        # Normalization and internal resampling (48k -> 16k using polyphase FIR)
         f32 = audio_chunk_i16.astype(np.float32) / 32767.0
-        audio_16k = librosa.resample(f32, orig_sr=48000, target_sr=16000)
+        audio_16k = resample_poly(f32, 1, 3)
         
         # Perform Inference
         processed_f32 = self.engine.infer(audio_16k=audio_16k)
