@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  voice_changer:
+    build: .
+    container_name: voice_changer_cli
+    
+    # ── VOLUME MAPPING ──────────────────────────────────────────────────────────
+    # We map your local model_source and voice changer folder to /app inside 
+    # the container so we can see all models and engine files instantly.
+    volumes:
+      - .:/app
+      - /Users/banan/Documents/voice cli/model_source:/app/model_source
+    
+    # ── RUNTIME COMMAND ────────────────────────────────────────────────────────
+    # By default, it just opens a shell. You can also run the CLI:
+    # command: python voice_cli.py -adapt hrvc_adapter ...
+    stdin_open: true
+    tty: true
+
+    # Force environment context (helps with Python import issues)
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+
+    # Mac specific optimization: we use CPU because MPS is not 
+    # pass-through to Docker for ARM64 yet.
+    cpus: 4.0
+    mem_limit: 8G

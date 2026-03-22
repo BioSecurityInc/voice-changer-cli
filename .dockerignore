@@ -1,0 +1,37 @@
+# Ignore Git
+.git
+.github
+.gitignore
+
+# Ignore VSCode / IDE configs
+.vscode
+.idea
+
+# --- CRITICAL: Ignore heavy model weights ---
+# User should map these locally via -v volumes in docker-compose.yml 
+# to keep the image small (only the engine code and GUI stays inside)
+model_source/
+model_source/**
+
+# Ignore temp / cache
+__pycache__
+*.pyc
+tmp/
+dummy/
+*.log
+
+# Ignore local virtualenvs
+venv/
+hrvc_env/
+.conda/
+.env
+
+# Ignore config states
+last_devices.json
+stored_setting.json
+vcclient.log
+
+# Ignore artifacts
+node_modules
+client/lib/dist
+server/upload_dir/

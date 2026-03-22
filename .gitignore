@@ -1,8 +1,12 @@
+# --- Temporary & Build Files ---
 tmp
 dummy
 node_modules
 __pycache__
+*.pyc
+.DS_Store
 
+# --- Engine Server Paths ---
 server/upload_dir/
 server/MMVC_Client_v13/
 server/MMVC_Client_v15/
@@ -17,23 +21,17 @@ server/out.wav
 server/G_*.pth
 server/train_config.json
 server/stored_setting.json
-# v.1.3.xテスト用モデルフォルダ
-server/v13
 
+# --- Test Environments ---
+server/v13
 server/model_hubert
 server/model_so-vits-svc-40v2_tsukuyomi/
-server/model_so-vits-svc-40v2_amitaro/
 server/model_so-vits-svc-40/
-server/model_so-vits-svc-40_mahiro/
-server/model_so-vits-svc-40_amitaro/
-server/model_so-vits-svc-40_tsukuyomi/
-server/model_so-vits-svc-40_kikotokurage
 model_DDSP-SVC/
 server/model_sovits
 server/test 
 
-server/memo.md
-
+# --- Client & Web Assets ---
 client/lib/dist
 client/lib/worklet/dist
 client/demo/public/models
@@ -41,50 +39,38 @@ client/demo/public/models_
 client/demo/dist/models
 client/demo/dist_web
 client/demo/src/001_provider/backup
-# client/demo/dist/ # demo用に残す
 
+# --- Pretrained Weights & Assets ---
 docker/cudnn/
-
 server/pretrain/
 server/weights/
 server/model_dir/
-server/model_dir2/
-server/weights_/
-server/weights__/
 server/models/
 server/samples.json
-server/samples_0003_t.json
-server/samples_0003_o.json
-server/samples_0003_t2.json
-server/samples_0003_o2.json
-server/samples_0003_d2.json
-server/samples_0004_t.json
-server/samples_0004_o.json
-server/samples_0004_d.json
-
-server/test_official_v1_v2.json
-server/test_ddpn_v1_v2.json
-server/vcclient.log
 start_trainer.sh
 
-# venv
+# --- Python Virtual Environments ---
 venv/
+hrvc_env/
+.conda/
+.env
 
-
+# --- Native Artifacts ---
 beatrice_internal_api.cp310-win_amd64.pyd
-108_average_110b_10.bin
+*.bin
 
-server/model_dir_static/Beatrice-JVS
-
-# Model weights and engine sources
+# --- Research Model Sources (Heavy Weights) ---
+# We ignore these to prevent accidental pushes to Git
 model_source/
+model_source/**
 
-# Development environment and logs
-vcclient-dev/
+# --- Local Logs & Settings ---
 *.log
-.DS_Store
+vcclient.log
 stored_setting.json
+last_devices.json
 
-# Tooling and GitHub configs
+# --- IDE Configs ---
 .github/
 .vscode/
+.idea/
