@@ -306,6 +306,12 @@ class VoiceChangerApp:
             
             # Step 3: Audio Playback
             self.audio.play(audio_out, self.output_id)
+
+            # --- Debug: Save files for comparison ---
+            import scipy.io.wavfile as wav
+            wav.write("debug_input.wav", self.audio.sample_rate, audio_in)
+            wav.write("debug_output.wav", self.audio.sample_rate, audio_out)
+            print(f"\n{Theme.info('DEBUG: Saved debug_input.wav and debug_output.wav for comparison.')}")
         except Exception as e:
             print(Theme.error(f"Inference processing failed: {e}"))
             traceback.print_exc()
